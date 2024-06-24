@@ -1,9 +1,8 @@
 ---
-title: try-catch 와 try-with-resources
-author: cotes
+title: arrayList 와 LinkedList
+author: winnie
 date: 2024-06-10 14:10:00 +0800
-categories: [Blogging]
-tags: [writing]
+categories: [Alogrithm]
 render_with_liquid: false
 ---
 

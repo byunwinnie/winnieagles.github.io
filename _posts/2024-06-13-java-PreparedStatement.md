@@ -1,9 +1,8 @@
 ---
 title: try-catch 와 try-with-resources
-author: cotes
-date: 2024-06-10 14:10:00 +0800
-categories: [Blogging]
-tags: [writing]
+author: winnie
+date: 2024-06-13 14:10:00 +0800
+categories: [Java]
 render_with_liquid: false
 ---
 

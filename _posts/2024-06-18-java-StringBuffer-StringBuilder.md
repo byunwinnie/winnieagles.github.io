@@ -1,535 +1,71 @@
 ---
-title: arrayList 와 LinkedList
+title: StringBuffer StringBuilder
 author: winnie
-date: 2024-06-10 14:10:00 +0800
-categories: [Alogrithm]
+date: 2024-06-18 11:33:00 +0800
+categories: [Java]
 render_with_liquid: false
 ---
 
-## Naming and Path
+## StringBuffer StringBuilder
+StringBuffer StringBuilder 둘 다 가변 길이 문자열을 처리하는 데 사용되는 클래스입니다.
 
-Create a new file named `YYYY-MM-DD-TITLE.EXTENSION`{: .filepath} and put it in the `_posts`{: .filepath} of the root directory. Please note that the `EXTENSION`{: .filepath} must be one of `md`{: .filepath} and `markdown`{: .filepath}. If you want to save time of creating files, please consider using the plugin [`Jekyll-Compose`](https://github.com/jekyll/jekyll-compose) to accomplish this.
+StringBuffer 동기화가 적용되어 있으며 thread-safe 로 멀티 스레드 환경에서 StringBuffer 인스턴스에 접근할 때 안전하게 사용할 수  있습니다.
+여러 스레드가 동시에 문자열을 수정하는 경우에 사용됩니다. 예를 들어 멀티 스레드 환경에서 공유 문자열을 처리하는 경우 사용됩니다.
+<script src="https://gist.github.com/byunyourim/e1e56c08b6168c66d7324a03d3c1dc3c.js"></script>
 
-## Front Matter
+StringBuilder 은 내부적으로 동기화가 적용되어 있지 않습니다. 따라서 멀티 스레드 환경에서 안전하지 않습니다.
+단일 스레드 환경에서 문자열을 수정할 때 사용되며 성능이 중요하고 thread-safe 가 필요하지 않은 경우 사용하는 것이 좋습니다.
+<script src="https://gist.github.com/byunyourim/3bc688cd74be0b6d4bf57f4b28300be4.js"></script>
 
-Basically, you need to fill the [Front Matter](https://jekyllrb.com/docs/front-matter/) as below at the top of the post:
+## StringBuilder 가 단일 스레드 환경에서 사용하기 적합한 이유
+StringBuilder 가 단일 스레드 환경에 적합한 이유는 동기화로 인한 오버헤드가 없기 때문입니다. 따라서 단일 스레드환경에서 빠릅니다.
+동기화는 메서드 호출시마다 추가적인 검사와 잠금 획득 및 해제를 필요로 하여 성능을 저하시킬 수 있습니다.
+따라서 동기화가 없는 StringBuilder 이 더 빠르게 실행됩니다.
+동기화가 앖는 만큼 StringBuilder 의 메서드들은 더 간단하고 경량화되어 빠른 실행이 가능하며 StringBuffer 보다 더 적은 자원을 소모합니다.
 
-```yaml
----
-title: TITLE
-date: YYYY-MM-DD HH:MM:SS +/-TTTT
-categories: [TOP_CATEGORIE, SUB_CATEGORIE]
-tags: [TAG]     # TAG names should always be lowercase
----
-```
 
-> The posts' _layout_ has been set to `post` by default, so there is no need to add the variable _layout_ in the Front Matter block.
-{: .prompt-tip }
+## 불변성
+불변성은 객체가 한 번 생성된 후로 상태를 바꿀 수 없는 성질을 말합니다.
+그렇기 때문에 여러 스레드가 동시에 읽어도 안전하며 상태가 변하지 않기 때문에 동기화 처리가 없어도 여러 스레드가 동시에 접근할 수 있습니다.
+또한 불변 객체는 변경될 일이 없기 때문에 캐싱하여 재사용할 수 있습니다. 따라서 메모리의 사용을 높일 수 있습니다.
 
-### Timezone of Date
+StringBuilder 는 가변 객체로 불변 객체와 반대되는 개념입니다.
+StringBuidler 은 내부 상태를 변경할 수 있으며 그 과정에서 내부 배열을 재사용합니다. 새로운 객체를 생성하지 않고 문자열 수정이 가능합니다.
+따라서 성능 측면에서는 유리할 수 있지만 멀티 스레드 환경에서는 주의해야 합니다.
 
-In order to accurately record the release date of a post, you should not only set up the `timezone` of `_config.yml`{: .filepath} but also provide the post's timezone in variable `date` of its Front Matter block. Format: `+/-TTTT`, e.g. `+0800`.
 
-### Categories and Tags
+## StringBuilder를 멀티 스레드 환경에서 안전하게 사용하려면
+StringBuilder 를 멀티스레드 환경에서 안전하게 사용하기 위해서는 외부에서 동기화 처리를 해주어야 합니다.
 
-The `categories` of each post are designed to contain up to two elements, and the number of elements in `tags` can be zero to infinity. For instance:
+동기화 처리 방법에는 synchronized 와 Lock  있습니다.
+내부적으로 동기화 처리가 되어있는 StringBuffer을 사용하는 방법도 있습니다.
 
-```yaml
----
-categories: [Animal, Insect]
-tags: [bee]
----
-```
 
-### Author Information
+## ReentrantLock과 Synchronized?
+ReentrantLock과 Synchronized 둘 다 자바에서 동기화를 제공하지만 사용법과 기능 측면에서 차이가 있습니다.
 
-The author information of the post usually does not need to be filled in the _Front Matter_ , they will be obtained from variables `social.name` and the first entry of `social.links` of the configuration file by default. But you can also override it as follows:
+synchronized 키워드는 블록이나 메서드 수준에서 동기화가 가능합니다. 자동으로 락을 획득하고 해제합니다.
+사용이 간단하며 가독성이 좋습니다.
+<script src="https://gist.github.com/byunyourim/d522eee32b0670d90a681e5929975f23.js"></script>
 
-Adding author information in `_data/authors.yml` (If your website doesn't have this file, don't hesitate to create one).
+ReentrantLock 클랫스는 명시적으로 락을 획득하고 해제하는 작업이 필요합니다.
+타임아웃을 지정할 수 있으며 Condition 객체를 사용하여 보다 세밀한 스레드 제어가 가능하며 공정성을 설정할 수 있습니다.
+복잡한 동기화 요구에 적합하지만 코드가 복잡해질 수 있습니다.
+<script src="https://gist.github.com/byunyourim/29938a19d1b22b786230fdc2fd6493c9.js"></script>
 
-```yaml
-<author_id>:
-  name: <full name>
-  twitter: <twitter_of_author>
-  url: <homepage_of_author>
-```
-{: file="_data/authors.yml" }
 
-And then use `author` to specify a single entry or `authors` to specify multiple entries:
+## ReentrantLock의 await 와 signal
+ReentrantLock 클래스는 Condition 객체를 통 스레드 간에 특정한 조건을 기다리고 신호를 보내는 기능을 제공합니다.해
+await() 메서드는 현재 스레드를 일시적으로 멈추고 다른 스레드가 signal() 또는 signalAll() 을 호출할 때까지 기다립니다.
 
-```yaml
----
-author: <author_id>                     # for single entry
-# or
-authors: [<author1_id>, <author2_id>]   # for multiple entries
----
-```
+singnal() 메서드는 하나의 대기 중인 스레드에게만 신호를 보냅니다. 일반적으로 상태가변경되어 하나의 스레만 깨어나야할 때 사용됩니다.
+공유 자원의 상태가 특정 조건을 만족할 때까지 대기하도록 스레드를 설정하는 경우 사용됩니다.
+<script src="https://gist.github.com/byunyourim/abc5c521cbbb8b597e7ca4587f021613.js"></script>
 
-Having said that, the key `author` can also identify multiple entries.
 
-> The benefit of reading the author information from the file `_data/authors.yml`{: .filepath } is that the page will have the meta tag `twitter:creator`, which enriches the [Twitter Cards](https://developer.twitter.com/en/docs/twitter-for-websites/cards/guides/getting-started#card-and-content-attribution) and is good for SEO.
-{: .prompt-info }
+## StringBuffer의 동기화
+StringBuffer 은 내부적으로 동기화 처리가 되어있습니다.
+따라서 멀티 스레드 환경에서 안전하게 사용이 가능합니다. 
 
-### Post Description
-
-By default, the first words of the post are used to display on the home page for a list of posts, in the _Further Reading_ section, and in the XML of the RSS feed. If you don't want to display the auto-generated description for the post, you can customize it using the `description` field in the _Front Matter_ as follows:
-
-```yaml
----
-description: Short summary of the post.
----
-```
-
-Additionally, the `description` text will also be displayed under the post title on the post's page.
-
-## Table of Contents
-
-By default, the **T**able **o**f **C**ontents (TOC) is displayed on the right panel of the post. If you want to turn it off globally, go to `_config.yml`{: .filepath} and set the value of variable `toc` to `false`. If you want to turn off TOC for a specific post, add the following to the post's [Front Matter](https://jekyllrb.com/docs/front-matter/):
-
-```yaml
----
-toc: false
----
-```
-
-## Comments
-
-The global switch of comments is defined by variable `comments.active` in the file `_config.yml`{: .filepath}. After selecting a comment system for this variable, comments will be turned on for all posts.
-
-If you want to close the comment for a specific post, add the following to the **Front Matter** of the post:
-
-```yaml
----
-comments: false
----
-```
-
-## Mathematics
-
-We use [**MathJax**][mathjax] to generate mathematics. For website performance reasons, the mathematical feature won't be loaded by default. But it can be enabled by:
-
-[mathjax]: https://www.mathjax.org/
-
-```yaml
----
-math: true
----
-```
-
-After enabling the mathematical feature, you can add math equations with the following syntax:
-
-- **Block math** should be added with `$$ math $$` with **mandatory** blank lines before and after `$$`
-  - **Inserting equation numbering** should be added with `$$\begin{equation} math \end{equation}$$`
-  - **Referencing equation numbering** should be done with `\label{eq:label_name}` in the equation block and `\eqref{eq:label_name}` inline with text (see example below)
-- **Inline math** (in lines) should be added with `$$ math $$` without any blank line before or after `$$`
-- **Inline math** (in lists) should be added with `\$$ math $$`
-
-```markdown
-<!-- Block math, keep all blank lines -->
-
-$$
-LaTeX_math_expression
-$$
-
-<!-- Equation numbering, keep all blank lines  -->
-
-$$
-\begin{equation}
-  LaTeX_math_expression
-  \label{eq:label_name}
-\end{equation}
-$$
-
-Can be referenced as \eqref{eq:label_name}.
-
-<!-- Inline math in lines, NO blank lines -->
-
-"Lorem ipsum dolor sit amet, $$ LaTeX_math_expression $$ consectetur adipiscing elit."
-
-<!-- Inline math in lists, escape the first `$` -->
-
-1. \$$ LaTeX_math_expression $$
-2. \$$ LaTeX_math_expression $$
-3. \$$ LaTeX_math_expression $$
-```
-
-> Starting with `v7.0.0`, configuration options for **MathJax** have been moved to file `assets/js/data/mathjax.js`{: .filepath }, and you can change the options as needed, such as adding [extensions][mathjax-exts].  
-> If you are building the site via `chirpy-starter`, copy that file from the gem installation directory (check with command `bundle info --path jekyll-theme-chirpy`) to the same directory in your repository.
-{: .prompt-tip }
-
-[mathjax-exts]: https://docs.mathjax.org/en/latest/input/tex/extensions/index.html
-
-## Mermaid
-
-[**Mermaid**](https://github.com/mermaid-js/mermaid) is a great diagram generation tool. To enable it on your post, add the following to the YAML block:
-
-```yaml
----
-mermaid: true
----
-```
-
-Then you can use it like other markdown languages: surround the graph code with ```` ```mermaid ```` and ```` ``` ````.
-
-## Images
-
-### Caption
-
-Add italics to the next line of an image, then it will become the caption and appear at the bottom of the image:
-
-```markdown
-![img-description](/path/to/image)
-_Image Caption_
-```
-{: .nolineno}
-
-### Size
-
-In order to prevent the page content layout from shifting when the image is loaded, we should set the width and height for each image.
-
-```markdown
-![Desktop View](/assets/img/sample/mockup.png){: width="700" height="400" }
-```
-{: .nolineno}
-
-> For an SVG, you have to at least specify its _width_, otherwise it won't be rendered.
-{: .prompt-info }
-
-Starting from _Chirpy v5.0.0_, `height` and `width` support abbreviations (`height` → `h`, `width` → `w`). The following example has the same effect as the above:
-
-```markdown
-![Desktop View](/assets/img/sample/mockup.png){: w="700" h="400" }
-```
-{: .nolineno}
-
-### Position
-
-By default, the image is centered, but you can specify the position by using one of the classes `normal`, `left`, and `right`.
-
-> Once the position is specified, the image caption should not be added.
-{: .prompt-warning }
-
-- **Normal position**
-
-  Image will be left aligned in below sample:
-
-  ```markdown
-  ![Desktop View](/assets/img/sample/mockup.png){: .normal }
-  ```
-  {: .nolineno}
-
-- **Float to the left**
-
-  ```markdown
-  ![Desktop View](/assets/img/sample/mockup.png){: .left }
-  ```
-  {: .nolineno}
-
-- **Float to the right**
-
-  ```markdown
-  ![Desktop View](/assets/img/sample/mockup.png){: .right }
-  ```
-  {: .nolineno}
-
-### Dark/Light mode
-
-You can make images follow theme preferences in dark/light mode. This requires you to prepare two images, one for dark mode and one for light mode, and then assign them a specific class (`dark` or `light`):
-
-```markdown
-![Light mode only](/path/to/light-mode.png){: .light }
-![Dark mode only](/path/to/dark-mode.png){: .dark }
-```
-
-### Shadow
-
-The screenshots of the program window can be considered to show the shadow effect:
-
-```markdown
-![Desktop View](/assets/img/sample/mockup.png){: .shadow }
-```
-{: .nolineno}
-
-### CDN URL
-
-If you host the media resources on the CDN, you can save the time of repeatedly writing the CDN URL by assigning the variable `cdn` of `_config.yml`{: .filepath} file:
-
-```yaml
-cdn: https://cdn.com
-```
-{: file='_config.yml' .nolineno}
-
-Once `cdn` is assigned, the CDN URL will be added to the path of all media resources (site avatar, posts' images, audio and video files) starting with `/`.
-
-For instance, when using images:
-
-```markdown
-![The flower](/path/to/flower.png)
-```
-{: .nolineno}
-
-The parsing result will automatically add the CDN prefix `https://cdn.com` before the image path:
-
-```html
-<img src="https://cdn.com/path/to/flower.png" alt="The flower" />
-```
-{: .nolineno }
-
-### Media Subpath
-
-When a post contains many images, it will be a time-consuming task to repeatedly define the path of the media resources. To solve this, we can define this path in the YAML block of the post:
-
-```yml
----
-media_subpath: /img/path/
----
-```
-
-And then, the image source of Markdown can write the file name directly:
-
-```md
-![The flower](flower.png)
-```
-{: .nolineno }
-
-The output will be:
-
-```html
-<img src="/img/path/flower.png" alt="The flower" />
-```
-{: .nolineno }
-
-### Preview Image
-
-If you want to add an image at the top of the post, please provide an image with a resolution of `1200 x 630`. Please note that if the image aspect ratio does not meet `1.91 : 1`, the image will be scaled and cropped.
-
-Knowing these prerequisites, you can start setting the image's attribute:
-
-```yaml
----
-image:
-  path: /path/to/image
-  alt: image alternative text
----
-```
-
-Note that the [`media_subpath`](#media-subpath) can also be passed to the preview image, that is, when it has been set, the attribute `path` only needs the image file name.
-
-For simple use, you can also just use `image` to define the path.
-
-```yml
----
-image: /path/to/image
----
-```
-
-### LQIP
-
-For preview images:
-
-```yaml
----
-image:
-  lqip: /path/to/lqip-file # or base64 URI
----
-```
-
-> You can observe LQIP in the preview image of post \"[Text and Typography](../text-and-typography/)\".
-
-For normal images:
-
-```markdown
-![Image description](/path/to/image){: lqip="/path/to/lqip-file" }
-```
-{: .nolineno }
-
-## Pinned Posts
-
-You can pin one or more posts to the top of the home page, and the fixed posts are sorted in reverse order according to their release date. Enable by:
-
-```yaml
----
-pin: true
----
-```
-
-## Prompts
-
-There are several types of prompts: `tip`, `info`, `warning`, and `danger`. They can be generated by adding the class `prompt-{type}` to the blockquote. For example, define a prompt of type `info` as follows:
-
-```md
-> Example line for prompt.
-{: .prompt-info }
-```
-{: .nolineno }
-
-## Syntax
-
-### Inline Code
-
-```md
-`inline code part`
-```
-{: .nolineno }
-
-### Filepath Hightlight
-
-```md
-`/path/to/a/file.extend`{: .filepath}
-```
-{: .nolineno }
-
-### Code Block
-
-Markdown symbols ```` ``` ```` can easily create a code block as follows:
-
-````md
-```
-This is a plaintext code snippet.
-```
-````
-
-#### Specifying Language
-
-Using ```` ```{language} ```` you will get a code block with syntax highlight:
-
-````markdown
-```yaml
-key: value
-```
-````
-
-> The Jekyll tag `{% highlight %}` is not compatible with this theme.
-{: .prompt-danger }
-
-#### Line Number
-
-By default, all languages except `plaintext`, `console`, and `terminal` will display line numbers. When you want to hide the line number of a code block, add the class `nolineno` to it:
-
-````markdown
-```shell
-echo 'No more line numbers!'
-```
-{: .nolineno }
-````
-
-#### Specifying the Filename
-
-You may have noticed that the code language will be displayed at the top of the code block. If you want to replace it with the file name, you can add the attribute `file` to achieve this:
-
-````markdown
-```shell
-# content
-```
-{: file="path/to/file" }
-````
-
-#### Liquid Codes
-
-If you want to display the **Liquid** snippet, surround the liquid code with `{% raw %}` and `{% endraw %}`:
-
-````markdown
-{% raw %}
-```liquid
-{% if product.title contains 'Pack' %}
-  This product's title contains the word Pack.
-{% endif %}
-```
-{% endraw %}
-````
-
-Or adding `render_with_liquid: false` (Requires Jekyll 4.0 or higher) to the post's YAML block.
-
-## Videos
-
-### Video Sharing Platform
-
-You can embed a video with the following syntax:
-
-```liquid
-{% include embed/{Platform}.html id='{ID}' %}
-```
-
-Where `Platform` is the lowercase of the platform name, and `ID` is the video ID.
-
-The following table shows how to get the two parameters we need in a given video URL, and you can also know the currently supported video platforms.
-
-| Video URL                                                                                          | Platform   | ID             |
-| -------------------------------------------------------------------------------------------------- | ---------- | :------------- |
-| [https://www.**youtube**.com/watch?v=**H-B46URT4mg**](https://www.youtube.com/watch?v=H-B46URT4mg) | `youtube`  | `H-B46URT4mg`  |
-| [https://www.**twitch**.tv/videos/**1634779211**](https://www.twitch.tv/videos/1634779211)         | `twitch`   | `1634779211`   |
-| [https://www.**bilibili**.com/video/**BV1Q44y1B7Wf**](https://www.bilibili.com/video/BV1Q44y1B7Wf) | `bilibili` | `BV1Q44y1B7Wf` |
-
-### Video File
-
-If you want to embed a video file directly, use the following syntax:
-
-```liquid
-{% include embed/video.html src='{URL}' %}
-```
-
-Where `URL` is an URL to a video file e.g. `/assets/img/sample/video.mp4`.
-
-You can also specify additional attributes for the embedded video file. Here is a full list of attributes allowed.
-
-- `poster='/path/to/poster.png'` - poster image for a video that is shown while video is downloading
-- `title='Text'` - title for a video that appears below the video and looks same as for images
-- `autoplay=true` - video automatically begins to play back as soon as it can
-- `loop=true` - automatically seek back to the start upon reaching the end of the video
-- `muted=true` - audio will be initially silenced
-- `types` - specify the extensions of additional video formats separated by `|`. Ensure these files exist in the same directory as your primary video file.
-
-Consider an example utilizing all of the above:
-
-```liquid
-{%
-  include embed/video.html
-  src='/path/to/video/video.mp4'
-  types='ogg|mov'
-  poster='poster.png'
-  title='Demo video'
-  autoplay=true
-  loop=true
-  muted=true
-%}
-```
-
-> It's not recommended to host video files in `assets` folder as they cannot be cached by PWA and may cause issues.
-> Instead, use CDN to host video files. Alternatively, use a separate folder that is excluded from PWA (see `pwa.deny_paths` setting in `_config.yml`).
-{: .prompt-warning }
-
-## Audios
-
-### Audio File
-
-If you want to embed an audio file directly, use the following syntax:
-
-```liquid
-{% include embed/audio.html src='{URL}' %}
-```
-
-Where `URL` is an URL to an audio file e.g. `/assets/img/sample/audio.mp3`.
-
-You can also specify additional attributes for the embedded audio file. Here is a full list of attributes allowed.
-
-- `title='Text'` - title for an audio that appears below the audio and looks same as for images
-- `types` - specify the extensions of additional audio formats separated by `|`. Ensure these files exist in the same directory as your primary audio file.
-
-Consider an example utilizing all of the above:
-
-```liquid
-{%
-  include embed/audio.html
-  src='/path/to/audio/audio.mp3'
-  types='ogg|wav|aac'
-  title='Demo audio'
-%}
-```
-
-> It's not recommended to host audio files in `assets` folder as they cannot be cached by PWA and may cause issues.
-> Instead, use CDN to host audio files. Alternatively, use a separate folder that is excluded from PWA (see `pwa.deny_paths` setting in `_config.yml`).
-{: .prompt-warning }
-
-## Learn More
-
-For more knowledge about Jekyll posts, visit the [Jekyll Docs: Posts](https://jekyllrb.com/docs/posts/).
+하지만 모든 메서드 동기화 되며 단일 스레드 환경에서도 불필요한 락을 걸고 해제하기 때문에 오버헤드가 발생할 수 있습니다.
+복잡 스레드 상호작용 과정에서 데드락이 발생할 수 있으며 synchronized 는 블록과 메서드 수준에서만 사용이 가능하기 때문에 세밀한 제어가 어려울 수 있습니다.

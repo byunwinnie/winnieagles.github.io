@@ -1,535 +1,66 @@
 ---
-title: try-catch 와 try-with-resources
+title: Statement 와 PreparedStatement
 author: winnie
-date: 2024-06-13 14:10:00 +0800
+date: 2024-06-20 14:10:00 +0800
 categories: [Java]
 render_with_liquid: false
 ---
 
-## Naming and Path
+## Statement와 PreparedStatement의 차이
+Statement와 PreparedStatement는 둘 다 JDBC API 에서 제공하는 인터페이스입니다.
 
-Create a new file named `YYYY-MM-DD-TITLE.EXTENSION`{: .filepath} and put it in the `_posts`{: .filepath} of the root directory. Please note that the `EXTENSION`{: .filepath} must be one of `md`{: .filepath} and `markdown`{: .filepath}. If you want to save time of creating files, please consider using the plugin [`Jekyll-Compose`](https://github.com/jekyll/jekyll-compose) to accomplish this.
+데이터베이스에서 쿼리를 실행할 때 쿼리를 효율적으로 실행하기 위해서 쿼리 캐싱이라는 작업을 시행합니다.
+쿼리 캐싱은 쿼리를 파싱하고 최적의 실행계획을 세운 뒤 실행하는 과정입니다.
 
-## Front Matter
+Statement는 쿼리를 실행할 때마다 매번 쿼리를 파싱하고 실행계획을 세우는 과정을 반복하게됩니다.
 
-Basically, you need to fill the [Front Matter](https://jekyllrb.com/docs/front-matter/) as below at the top of the post:
+PreparedStatement는 한 번 쿼리가 실행된 후에는 실행계획을 따로 세우지 않 파라미터만 변경하여 쿼리를 날립니다.고
+따라서 처음 실행된 실행계획을 재사용함으로써 성능상으로 좋습니다.
 
-```yaml
----
-title: TITLE
-date: YYYY-MM-DD HH:MM:SS +/-TTTT
-categories: [TOP_CATEGORIE, SUB_CATEGORIE]
-tags: [TAG]     # TAG names should always be lowercase
----
-```
+보안 측면에서는 Statement는 입력값을 실제 쿼리에 문자열의 형태로 이어 붙입니다.
+만약 패스워드를 검색하는 쿼리가 있다고 가정을 했을 때, 유저가 패스워드 값을 입력한 후 이어서 세미콜론을 붙이고
+새로운 select * from User; 쿼리를 작성하면 노출되면 안되는 데이터들이 노출될 위험이 있습니다.
+따라서 SQL injection 문제가 발생할 위험이 있습니다.
 
-> The posts' _layout_ has been set to `post` by default, so there is no need to add the variable _layout_ in the Front Matter block.
-{: .prompt-tip }
 
-### Timezone of Date
+PreparedStatement는 입력값을 파라미터로 넘깁니다. 파라미터로 넘어가는 부분을 ? 로 표시하여 바인딩해서 처리합니다.
+PreparedStatement를 사용할 때 ?(플레이스 홀)를 사용하면, 사용자 입력값이 쿼리에 직접 삽입되지 않고
+JDBC 드라이버가 자동으로 매개변수 값을 이스케이프 처리합니다.
+위와 같은 방식("; select * from User;")으로 값을 넘기게 되면 SQL injection을 했을 때 문법 에러가 발생하게 됩니다.
+이렇게 쿼리와 입력 값을 분리해서 처리하기 때문에 입력값은 쿼리의 데이터로만 사용되며 쿼리 구문으로 해석되지 않습니다.
+이는 SQL 인젝션 공격을 방지하는 데 매우 효과적입니다.
 
-In order to accurately record the release date of a post, you should not only set up the `timezone` of `_config.yml`{: .filepath} but also provide the post's timezone in variable `date` of its Front Matter block. Format: `+/-TTTT`, e.g. `+0800`.
 
-### Categories and Tags
+## PreparedStatement를 사용할 때 주의해야 하는 부분
+주의사항으로는 PreparedStatement 는 AutoCloseable 를 확장하고 있기 때문에 사용 후에는 리소스를 닫아주어야 합니다.
+또한 실행 전에 컴파일되기 때문에 sql 문법 오류가 생기는 경우 컴파일 시점에 예외가 발생합니다.
 
-The `categories` of each post are designed to contain up to two elements, and the number of elements in `tags` can be zero to infinity. For instance:
 
-```yaml
----
-categories: [Animal, Insect]
-tags: [bee]
----
-```
+## PreparedStatement를 사용시 발생할 수 있는 성능 이슈
+캐싱을 이용하기 때문에 동일한 쿼리를 여러 번 실행할 때 성능을 최적화할 수 있습니다.
+하지만 Mysql의 경우 좀 다릅니다.
+쿼리는 정상적으로 오류없이 동작 하지만 내부적으로 캐싱하는 동작을 하지않습니다. 따라서 캐싱을 하기위해서는
+useServerPrepStmts 와 cachePrepStmts 옵션을 설정하여야 캐싱을 활용할 수 있습니다.
 
-### Author Information
+또한 매개변수 바인딩시 적절한 데이터 타입(setString, setInt)을 사용하여 성능을 최적화할 수 있으며
+대랑의 데이터 처리시 addBatch 와 executeBatch 메서드를 사용하여 배치 처리함으로써 성능을 높일 수 있습니다.
 
-The author information of the post usually does not need to be filled in the _Front Matter_ , they will be obtained from variables `social.name` and the first entry of `social.links` of the configuration file by default. But you can also override it as follows:
+동일한 Sql 템플릿을 재사용하기 때문에 컴파일 비용을 줄이고 성능을 최적화합니다.
 
-Adding author information in `_data/authors.yml` (If your website doesn't have this file, don't hesitate to create one).
 
-```yaml
-<author_id>:
-  name: <full name>
-  twitter: <twitter_of_author>
-  url: <homepage_of_author>
-```
-{: file="_data/authors.yml" }
+## SQL Injection 공격을 예방하는 방법
+SQL injection 공격을 막기 위해서는 매개변수를 이용해 쿼리에 값을 넣어야합니다.
+PreparedStatement를 사용하면 드라이버가 자동으로 매개변수 값을 이스케이프 처리하여 SQL Injection 공격을 방지합니다.
 
-And then use `author` to specify a single entry or `authors` to specify multiple entries:
 
-```yaml
----
-author: <author_id>                     # for single entry
-# or
-authors: [<author1_id>, <author2_id>]   # for multiple entries
----
-```
+## PreparedStatement에서 Batch 처리를 사용하는 경우 장점과 주의할 점
+Batch의 장점은 대량의 데이터를 한 번에 처리할 수 있습니다.
+이로써 네트워크 비용을 줄이고 연산 횟수를 감소시킴으로써 성능을 향상시킬 수 있습니다.
+또한 여러 SQL 문을 하나의 트랜잭션으로 묶어서 실행하기 때문에 데이터의 일관성이 유지됩니다.
 
-Having said that, the key `author` can also identify multiple entries.
+주의해야할 부분은 대량의 데이터를 처리하기 때문에 메모리 부족 현상이 발생할 수 있다는 것입니다.
+따라서 적절한 배치 크기를 설정해야합니다.
+executeBatch() 는 쿼리의 실행 결과를 반환하지 않기 때문에 각 쿼리의 행 수 등의 정보를 확인하려면 추가적인 처리가 필요합니다.
 
-> The benefit of reading the author information from the file `_data/authors.yml`{: .filepath } is that the page will have the meta tag `twitter:creator`, which enriches the [Twitter Cards](https://developer.twitter.com/en/docs/twitter-for-websites/cards/guides/getting-started#card-and-content-attribution) and is good for SEO.
-{: .prompt-info }
 
-### Post Description
 
-By default, the first words of the post are used to display on the home page for a list of posts, in the _Further Reading_ section, and in the XML of the RSS feed. If you don't want to display the auto-generated description for the post, you can customize it using the `description` field in the _Front Matter_ as follows:
-
-```yaml
----
-description: Short summary of the post.
----
-```
-
-Additionally, the `description` text will also be displayed under the post title on the post's page.
-
-## Table of Contents
-
-By default, the **T**able **o**f **C**ontents (TOC) is displayed on the right panel of the post. If you want to turn it off globally, go to `_config.yml`{: .filepath} and set the value of variable `toc` to `false`. If you want to turn off TOC for a specific post, add the following to the post's [Front Matter](https://jekyllrb.com/docs/front-matter/):
-
-```yaml
----
-toc: false
----
-```
-
-## Comments
-
-The global switch of comments is defined by variable `comments.active` in the file `_config.yml`{: .filepath}. After selecting a comment system for this variable, comments will be turned on for all posts.
-
-If you want to close the comment for a specific post, add the following to the **Front Matter** of the post:
-
-```yaml
----
-comments: false
----
-```
-
-## Mathematics
-
-We use [**MathJax**][mathjax] to generate mathematics. For website performance reasons, the mathematical feature won't be loaded by default. But it can be enabled by:
-
-[mathjax]: https://www.mathjax.org/
-
-```yaml
----
-math: true
----
-```
-
-After enabling the mathematical feature, you can add math equations with the following syntax:
-
-- **Block math** should be added with `$$ math $$` with **mandatory** blank lines before and after `$$`
-  - **Inserting equation numbering** should be added with `$$\begin{equation} math \end{equation}$$`
-  - **Referencing equation numbering** should be done with `\label{eq:label_name}` in the equation block and `\eqref{eq:label_name}` inline with text (see example below)
-- **Inline math** (in lines) should be added with `$$ math $$` without any blank line before or after `$$`
-- **Inline math** (in lists) should be added with `\$$ math $$`
-
-```markdown
-<!-- Block math, keep all blank lines -->
-
-$$
-LaTeX_math_expression
-$$
-
-<!-- Equation numbering, keep all blank lines  -->
-
-$$
-\begin{equation}
-  LaTeX_math_expression
-  \label{eq:label_name}
-\end{equation}
-$$
-
-Can be referenced as \eqref{eq:label_name}.
-
-<!-- Inline math in lines, NO blank lines -->
-
-"Lorem ipsum dolor sit amet, $$ LaTeX_math_expression $$ consectetur adipiscing elit."
-
-<!-- Inline math in lists, escape the first `$` -->
-
-1. \$$ LaTeX_math_expression $$
-2. \$$ LaTeX_math_expression $$
-3. \$$ LaTeX_math_expression $$
-```
-
-> Starting with `v7.0.0`, configuration options for **MathJax** have been moved to file `assets/js/data/mathjax.js`{: .filepath }, and you can change the options as needed, such as adding [extensions][mathjax-exts].  
-> If you are building the site via `chirpy-starter`, copy that file from the gem installation directory (check with command `bundle info --path jekyll-theme-chirpy`) to the same directory in your repository.
-{: .prompt-tip }
-
-[mathjax-exts]: https://docs.mathjax.org/en/latest/input/tex/extensions/index.html
-
-## Mermaid
-
-[**Mermaid**](https://github.com/mermaid-js/mermaid) is a great diagram generation tool. To enable it on your post, add the following to the YAML block:
-
-```yaml
----
-mermaid: true
----
-```
-
-Then you can use it like other markdown languages: surround the graph code with ```` ```mermaid ```` and ```` ``` ````.
-
-## Images
-
-### Caption
-
-Add italics to the next line of an image, then it will become the caption and appear at the bottom of the image:
-
-```markdown
-![img-description](/path/to/image)
-_Image Caption_
-```
-{: .nolineno}
-
-### Size
-
-In order to prevent the page content layout from shifting when the image is loaded, we should set the width and height for each image.
-
-```markdown
-![Desktop View](/assets/img/sample/mockup.png){: width="700" height="400" }
-```
-{: .nolineno}
-
-> For an SVG, you have to at least specify its _width_, otherwise it won't be rendered.
-{: .prompt-info }
-
-Starting from _Chirpy v5.0.0_, `height` and `width` support abbreviations (`height` → `h`, `width` → `w`). The following example has the same effect as the above:
-
-```markdown
-![Desktop View](/assets/img/sample/mockup.png){: w="700" h="400" }
-```
-{: .nolineno}
-
-### Position
-
-By default, the image is centered, but you can specify the position by using one of the classes `normal`, `left`, and `right`.
-
-> Once the position is specified, the image caption should not be added.
-{: .prompt-warning }
-
-- **Normal position**
-
-  Image will be left aligned in below sample:
-
-  ```markdown
-  ![Desktop View](/assets/img/sample/mockup.png){: .normal }
-  ```
-  {: .nolineno}
-
-- **Float to the left**
-
-  ```markdown
-  ![Desktop View](/assets/img/sample/mockup.png){: .left }
-  ```
-  {: .nolineno}
-
-- **Float to the right**
-
-  ```markdown
-  ![Desktop View](/assets/img/sample/mockup.png){: .right }
-  ```
-  {: .nolineno}
-
-### Dark/Light mode
-
-You can make images follow theme preferences in dark/light mode. This requires you to prepare two images, one for dark mode and one for light mode, and then assign them a specific class (`dark` or `light`):
-
-```markdown
-![Light mode only](/path/to/light-mode.png){: .light }
-![Dark mode only](/path/to/dark-mode.png){: .dark }
-```
-
-### Shadow
-
-The screenshots of the program window can be considered to show the shadow effect:
-
-```markdown
-![Desktop View](/assets/img/sample/mockup.png){: .shadow }
-```
-{: .nolineno}
-
-### CDN URL
-
-If you host the media resources on the CDN, you can save the time of repeatedly writing the CDN URL by assigning the variable `cdn` of `_config.yml`{: .filepath} file:
-
-```yaml
-cdn: https://cdn.com
-```
-{: file='_config.yml' .nolineno}
-
-Once `cdn` is assigned, the CDN URL will be added to the path of all media resources (site avatar, posts' images, audio and video files) starting with `/`.
-
-For instance, when using images:
-
-```markdown
-![The flower](/path/to/flower.png)
-```
-{: .nolineno}
-
-The parsing result will automatically add the CDN prefix `https://cdn.com` before the image path:
-
-```html
-<img src="https://cdn.com/path/to/flower.png" alt="The flower" />
-```
-{: .nolineno }
-
-### Media Subpath
-
-When a post contains many images, it will be a time-consuming task to repeatedly define the path of the media resources. To solve this, we can define this path in the YAML block of the post:
-
-```yml
----
-media_subpath: /img/path/
----
-```
-
-And then, the image source of Markdown can write the file name directly:
-
-```md
-![The flower](flower.png)
-```
-{: .nolineno }
-
-The output will be:
-
-```html
-<img src="/img/path/flower.png" alt="The flower" />
-```
-{: .nolineno }
-
-### Preview Image
-
-If you want to add an image at the top of the post, please provide an image with a resolution of `1200 x 630`. Please note that if the image aspect ratio does not meet `1.91 : 1`, the image will be scaled and cropped.
-
-Knowing these prerequisites, you can start setting the image's attribute:
-
-```yaml
----
-image:
-  path: /path/to/image
-  alt: image alternative text
----
-```
-
-Note that the [`media_subpath`](#media-subpath) can also be passed to the preview image, that is, when it has been set, the attribute `path` only needs the image file name.
-
-For simple use, you can also just use `image` to define the path.
-
-```yml
----
-image: /path/to/image
----
-```
-
-### LQIP
-
-For preview images:
-
-```yaml
----
-image:
-  lqip: /path/to/lqip-file # or base64 URI
----
-```
-
-> You can observe LQIP in the preview image of post \"[Text and Typography](../text-and-typography/)\".
-
-For normal images:
-
-```markdown
-![Image description](/path/to/image){: lqip="/path/to/lqip-file" }
-```
-{: .nolineno }
-
-## Pinned Posts
-
-You can pin one or more posts to the top of the home page, and the fixed posts are sorted in reverse order according to their release date. Enable by:
-
-```yaml
----
-pin: true
----
-```
-
-## Prompts
-
-There are several types of prompts: `tip`, `info`, `warning`, and `danger`. They can be generated by adding the class `prompt-{type}` to the blockquote. For example, define a prompt of type `info` as follows:
-
-```md
-> Example line for prompt.
-{: .prompt-info }
-```
-{: .nolineno }
-
-## Syntax
-
-### Inline Code
-
-```md
-`inline code part`
-```
-{: .nolineno }
-
-### Filepath Hightlight
-
-```md
-`/path/to/a/file.extend`{: .filepath}
-```
-{: .nolineno }
-
-### Code Block
-
-Markdown symbols ```` ``` ```` can easily create a code block as follows:
-
-````md
-```
-This is a plaintext code snippet.
-```
-````
-
-#### Specifying Language
-
-Using ```` ```{language} ```` you will get a code block with syntax highlight:
-
-````markdown
-```yaml
-key: value
-```
-````
-
-> The Jekyll tag `{% highlight %}` is not compatible with this theme.
-{: .prompt-danger }
-
-#### Line Number
-
-By default, all languages except `plaintext`, `console`, and `terminal` will display line numbers. When you want to hide the line number of a code block, add the class `nolineno` to it:
-
-````markdown
-```shell
-echo 'No more line numbers!'
-```
-{: .nolineno }
-````
-
-#### Specifying the Filename
-
-You may have noticed that the code language will be displayed at the top of the code block. If you want to replace it with the file name, you can add the attribute `file` to achieve this:
-
-````markdown
-```shell
-# content
-```
-{: file="path/to/file" }
-````
-
-#### Liquid Codes
-
-If you want to display the **Liquid** snippet, surround the liquid code with `{% raw %}` and `{% endraw %}`:
-
-````markdown
-{% raw %}
-```liquid
-{% if product.title contains 'Pack' %}
-  This product's title contains the word Pack.
-{% endif %}
-```
-{% endraw %}
-````
-
-Or adding `render_with_liquid: false` (Requires Jekyll 4.0 or higher) to the post's YAML block.
-
-## Videos
-
-### Video Sharing Platform
-
-You can embed a video with the following syntax:
-
-```liquid
-{% include embed/{Platform}.html id='{ID}' %}
-```
-
-Where `Platform` is the lowercase of the platform name, and `ID` is the video ID.
-
-The following table shows how to get the two parameters we need in a given video URL, and you can also know the currently supported video platforms.
-
-| Video URL                                                                                          | Platform   | ID             |
-| -------------------------------------------------------------------------------------------------- | ---------- | :------------- |
-| [https://www.**youtube**.com/watch?v=**H-B46URT4mg**](https://www.youtube.com/watch?v=H-B46URT4mg) | `youtube`  | `H-B46URT4mg`  |
-| [https://www.**twitch**.tv/videos/**1634779211**](https://www.twitch.tv/videos/1634779211)         | `twitch`   | `1634779211`   |
-| [https://www.**bilibili**.com/video/**BV1Q44y1B7Wf**](https://www.bilibili.com/video/BV1Q44y1B7Wf) | `bilibili` | `BV1Q44y1B7Wf` |
-
-### Video File
-
-If you want to embed a video file directly, use the following syntax:
-
-```liquid
-{% include embed/video.html src='{URL}' %}
-```
-
-Where `URL` is an URL to a video file e.g. `/assets/img/sample/video.mp4`.
-
-You can also specify additional attributes for the embedded video file. Here is a full list of attributes allowed.
-
-- `poster='/path/to/poster.png'` - poster image for a video that is shown while video is downloading
-- `title='Text'` - title for a video that appears below the video and looks same as for images
-- `autoplay=true` - video automatically begins to play back as soon as it can
-- `loop=true` - automatically seek back to the start upon reaching the end of the video
-- `muted=true` - audio will be initially silenced
-- `types` - specify the extensions of additional video formats separated by `|`. Ensure these files exist in the same directory as your primary video file.
-
-Consider an example utilizing all of the above:
-
-```liquid
-{%
-  include embed/video.html
-  src='/path/to/video/video.mp4'
-  types='ogg|mov'
-  poster='poster.png'
-  title='Demo video'
-  autoplay=true
-  loop=true
-  muted=true
-%}
-```
-
-> It's not recommended to host video files in `assets` folder as they cannot be cached by PWA and may cause issues.
-> Instead, use CDN to host video files. Alternatively, use a separate folder that is excluded from PWA (see `pwa.deny_paths` setting in `_config.yml`).
-{: .prompt-warning }
-
-## Audios
-
-### Audio File
-
-If you want to embed an audio file directly, use the following syntax:
-
-```liquid
-{% include embed/audio.html src='{URL}' %}
-```
-
-Where `URL` is an URL to an audio file e.g. `/assets/img/sample/audio.mp3`.
-
-You can also specify additional attributes for the embedded audio file. Here is a full list of attributes allowed.
-
-- `title='Text'` - title for an audio that appears below the audio and looks same as for images
-- `types` - specify the extensions of additional audio formats separated by `|`. Ensure these files exist in the same directory as your primary audio file.
-
-Consider an example utilizing all of the above:
-
-```liquid
-{%
-  include embed/audio.html
-  src='/path/to/audio/audio.mp3'
-  types='ogg|wav|aac'
-  title='Demo audio'
-%}
-```
-
-> It's not recommended to host audio files in `assets` folder as they cannot be cached by PWA and may cause issues.
-> Instead, use CDN to host audio files. Alternatively, use a separate folder that is excluded from PWA (see `pwa.deny_paths` setting in `_config.yml`).
-{: .prompt-warning }
-
-## Learn More
-
-For more knowledge about Jekyll posts, visit the [Jekyll Docs: Posts](https://jekyllrb.com/docs/posts/).
